@@ -3,6 +3,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { geohashForLocation } from 'geofire-common';
 import { demoPredictions } from '../src/lib/agents/agent5-predict';
 import type { IssueCategory, IssueStatus } from '../src/types/issue';
+import type { Department } from '../src/types/user';
 
 if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true' || !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   process.env.FIRESTORE_EMULATOR_HOST ||= '127.0.0.1:8080';
@@ -45,6 +46,7 @@ const statuses: IssueStatus[] = [
 ];
 
 const categories: IssueCategory[] = ['pothole', 'waterlogging', 'broken_light', 'garbage', 'damaged_pipe'];
+const departments: Department[] = ['roads', 'drainage', 'electricity', 'sanitation', 'water_supply', 'parks', 'municipal'];
 
 async function main() {
   const batch = db.batch();
@@ -52,43 +54,39 @@ async function main() {
     batch.set(db.doc(`wards/${ward.id}`), {
       ...ward,
       boundaryGeohashes: [],
-      officials: { roads: 'demo-officer', drainage: 'demo-officer', electricity: 'demo-officer', sanitation: 'demo-officer', water_supply: 'demo-officer', parks: 'demo-officer', municipal: 'demo-officer' },
-      supervisorId: 'demo-supervisor',
+      officials: { 
+        roads: `demo-officer-${ward.id}-roads`, 
+        drainage: `demo-officer-${ward.id}-drainage`, 
+        electricity: `demo-officer-${ward.id}-electricity`, 
+        sanitation: `demo-officer-${ward.id}-sanitation`, 
+        water_supply: `demo-officer-${ward.id}-water_supply`, 
+        parks: `demo-officer-${ward.id}-parks`, 
+        municipal: `demo-admin-${ward.id}-municipal` 
+      },
+      supervisorId: `demo-admin-${ward.id}-municipal`,
     });
-  }
 
-  batch.set(db.doc('officials/demo-officer'), {
-    id: 'demo-officer',
-    phone: '+919999999999',
-    name: 'Demo Ward Officer',
-    role: 'officer',
-    ward: 'ward_rs_puram',
-    department: 'roads',
-    isActive: true,
-    totalAssigned: 8,
-    totalResolvedInSLA: 5,
-    totalResolvedOutOfSLA: 1,
-    suspiciousResolutionCount: 0,
-    averageResolutionTimeHours: 18,
-    createdAt: FieldValue.serverTimestamp(),
-    lastActiveAt: FieldValue.serverTimestamp(),
-  });
-  batch.set(db.doc('officials/demo-supervisor'), {
-    id: 'demo-supervisor',
-    phone: '+918888888888',
-    name: 'Demo Supervisor',
-    role: 'admin',
-    ward: 'ward_rs_puram',
-    department: 'municipal',
-    isActive: true,
-    totalAssigned: 0,
-    totalResolvedInSLA: 0,
-    totalResolvedOutOfSLA: 0,
-    suspiciousResolutionCount: 0,
-    averageResolutionTimeHours: 0,
-    createdAt: FieldValue.serverTimestamp(),
-    lastActiveAt: FieldValue.serverTimestamp(),
-  });
+    for (const dept of departments) {
+      const isAdmin = dept === 'municipal';
+      const id = `demo-${isAdmin ? 'admin' : 'officer'}-${ward.id}-${dept}`;
+      batch.set(db.doc(`officials/${id}`), {
+        id,
+        phone: isAdmin ? '+918888888888' : '+919999999999',
+        name: `Demo ${isAdmin ? 'Admin' : 'Officer'} - ${ward.name}`,
+        role: isAdmin ? 'admin' : 'officer',
+        ward: ward.id,
+        department: dept,
+        isActive: true,
+        totalAssigned: dept === 'roads' && ward.id === 'ward_rs_puram' ? 8 : 0,
+        totalResolvedInSLA: dept === 'roads' && ward.id === 'ward_rs_puram' ? 5 : 0,
+        totalResolvedOutOfSLA: dept === 'roads' && ward.id === 'ward_rs_puram' ? 1 : 0,
+        suspiciousResolutionCount: 0,
+        averageResolutionTimeHours: dept === 'roads' && ward.id === 'ward_rs_puram' ? 18 : 0,
+        createdAt: FieldValue.serverTimestamp(),
+        lastActiveAt: FieldValue.serverTimestamp(),
+      });
+    }
+  }
 
   statuses.forEach((status, index) => {
     const ward = wards[index % wards.length];
@@ -125,7 +123,7 @@ async function main() {
       corroborationCount: (index % 4) + 1,
       credibilityWeight: 1 + (index % 5),
       corroborations: [],
-      assignedOfficialId: 'demo-officer',
+      assignedOfficialId: `demo-officer-${ward.id}-${category === 'waterlogging' ? 'drainage' : category === 'garbage' ? 'sanitation' : category === 'broken_light' ? 'electricity' : 'roads'}`,
       department: category === 'waterlogging' ? 'drainage' : category === 'garbage' ? 'sanitation' : category === 'broken_light' ? 'electricity' : 'roads',
       slaDeadline,
       convergenceAlert: index % 6 === 0,

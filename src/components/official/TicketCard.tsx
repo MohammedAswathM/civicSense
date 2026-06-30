@@ -107,6 +107,7 @@ function statusLabel(status: Issue['status']) {
     pending_classification: 'Classifying…',
     pending_deduplication: 'Deduplicating',
     pending_routing: 'Routing…',
+    unassigned_no_official: 'Unassigned (No Official)',
     assigned: 'Open',
     in_progress: 'In Progress',
     pending_verification: 'Pending Verify',

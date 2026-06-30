@@ -21,9 +21,7 @@ export async function run(input: Agent3Input, store: Agent3Store): Promise<Agent
   try {
     const ward = getWardFromGPS(input.gpsLat, input.gpsLng);
     const department = CATEGORY_TO_DEPARTMENT[input.category];
-    const assignedOfficialId =
-      (await store.findOfficial(ward, department, input.autoEscalate)) ||
-      (input.autoEscalate ? `supervisor_${ward}` : `${ward}_${department}_officer`);
+    const assignedOfficialId = await store.findOfficial(ward, department, input.autoEscalate);
 
     const nearbyIssueIds = (await store.findOpenIssuesNear(input.gpsLat, input.gpsLng))
       .filter((issue) => issue.issueId !== input.issueId)
@@ -38,13 +36,22 @@ export async function run(input: Agent3Input, store: Agent3Store): Promise<Agent
 
     const slaDeadline = new Date(Date.now() + SLA_HOURS[input.category][input.severity] * 60 * 60 * 1000);
     const output: Agent3Output = {
-      assignedOfficialId,
+      assignedOfficialId: assignedOfficialId || '',
       department,
       ward,
       slaDeadline: slaDeadline as unknown as Agent3Output['slaDeadline'],
       convergenceAlert: nearbyIssueIds.length >= 2,
       nearbyIssueIds,
     };
+
+    if (!assignedOfficialId) {
+      await store.updateIssue(input.issueId, {
+        ...output,
+        status: 'unassigned_no_official',
+        updatedAt: new Date(),
+      });
+      return output;
+    }
 
     await store.updateIssue(input.issueId, {
       ...output,

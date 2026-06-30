@@ -15,6 +15,7 @@ export type IssueStatus =
   | 'pending_classification'
   | 'pending_deduplication'
   | 'pending_routing'
+  | 'unassigned_no_official'
   | 'assigned'
   | 'in_progress'
   | 'pending_verification'

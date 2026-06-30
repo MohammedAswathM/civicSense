@@ -160,6 +160,7 @@ select:focus-visible {
 
 /* ── Status badge colors ─ paired dot + text label, never color alone ──── */
 .status-pending_classification { @apply bg-gray-100 text-gray-700; }
+.status-unassigned_no_official  { @apply bg-red-100 text-red-900 ring-2 ring-red-500 animate-pulse; }
 .status-assigned                { @apply bg-alarm-50 text-alarm-600; }
 .status-in_progress             { @apply bg-signal-50 text-signal-600; }
 .status-pending_verification    { @apply bg-blue-100 text-blue-800; }
