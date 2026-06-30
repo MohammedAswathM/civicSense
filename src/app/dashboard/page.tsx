@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Issue } from '@/types/issue';
+import type { Agent5Output } from '@/lib/agents/agent5-predict';
 
 const STAT_CARDS = [
   { key: 'monthIssues',   label: 'This Month',       icon: '📋', color: 'from-blue-500 to-blue-600' },
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [myIds, setMyIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [predictions, setPredictions] = useState<Agent5Output[]>([]);
 
   useEffect(() => {
     const q = query(collection(db, 'issues'), orderBy('createdAt', 'desc'), limit(300));
@@ -27,6 +29,13 @@ export default function DashboardPage() {
     const mine = JSON.parse(localStorage.getItem('myReports') || '[]') as Array<{ publicId?: string; publicTrackingId?: string }>;
     setMyIds(mine.map((item) => item.publicId || item.publicTrackingId || '').filter(Boolean));
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'predictions'), limit(20));
+    return onSnapshot(q, (snap) => {
+      setPredictions(snap.docs.map((d) => ({ wardId: d.id, ...d.data() }) as Agent5Output));
+    });
   }, []);
 
   const stats = useMemo(() => computeStats(issues), [issues]);
@@ -148,40 +157,49 @@ export default function DashboardPage() {
               <p className="mt-0.5 text-sm text-gray-500">Wards with highest open issue concentration</p>
             </div>
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            {(loading ? Array.from({ length: 3 }) : wards.filter((w) => w.open > 0).slice(0, 3)).map((ward, index) => (
-              loading ? (
-                <div key={index} className="h-24 rounded-2xl shimmer" />
-              ) : ward ? (
-                <div key={(ward as typeof wards[0]).name} className="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-4">
-                  <div className="flex items-start justify-between">
-                    <p className="font-semibold text-gray-900">{(ward as typeof wards[0]).name}</p>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${index === 0 ? 'bg-red-100 text-red-700' : index === 1 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                      #{index + 1}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-end justify-between">
-                    <div>
-                      <p className="text-2xl font-black text-gray-900">{(ward as typeof wards[0]).open}</p>
-                      <p className="text-xs text-gray-400">open issues</p>
+          <div className="mt-4">
+            {loading ? (
+              <div className="grid gap-4 sm:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="h-24 rounded-2xl shimmer" />
+                ))}
+              </div>
+            ) : predictions.length > 0 ? (
+              <div className="space-y-2">
+                {predictions.slice(0, 3).flatMap((pred) =>
+                  pred.hotspots.map((hs, i) => (
+                    <div key={`${pred.wardId}-${i}`} className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3">
+                      <div>
+                        <p className="font-semibold text-gray-900 capitalize">{String(pred.wardId).replace(/_/g, ' ')}</p>
+                        <p className="text-xs text-gray-500 capitalize">{String(hs.dominantCategory).replace(/_/g, ' ')} · {hs.predictedIssueCount} predicted issues</p>
+                      </div>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                        hs.confidence === 'high' ? 'bg-red-100 text-red-700' :
+                        hs.confidence === 'medium' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>{hs.confidence} risk</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-green-600">{(ward as typeof wards[0]).resolvedMonth} resolved</p>
-                      <p className="text-xs text-gray-400">this month</p>
+                  ))
+                )}
+              </div>
+            ) : wards.filter(w => w.open > 0).length > 0 ? (
+              <div className="space-y-2">
+                {wards.filter(w => w.open > 0).slice(0, 3).map((ward, index) => (
+                  <div key={ward.name} className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                        index === 0 ? 'bg-red-100 text-red-700' : index === 1 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'
+                      }`}>{index + 1}</span>
+                      <p className="font-semibold text-gray-900">{ward.name}</p>
                     </div>
+                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">{ward.open} open</span>
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
-                    <div className={`h-full rounded-full ${index === 0 ? 'bg-red-400' : index === 1 ? 'bg-amber-400' : 'bg-blue-400'}`}
-                      style={{ width: `${Math.min(100, ((ward as typeof wards[0]).open / Math.max(...wards.map((w) => w.open), 1)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ) : null
-            ))}
-            {!loading && wards.filter((w) => w.open > 0).length === 0 && (
-              <div className="col-span-3 rounded-2xl bg-green-50 p-6 text-center text-green-700">
-                <div className="text-3xl">🎉</div>
-                <p className="mt-2 font-semibold">No active hotspots! All wards are clear.</p>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-100 bg-gray-50/50 py-8 text-center">
+                <p className="text-2xl">🎉</p>
+                <p className="mt-2 text-sm font-semibold text-gray-500">No active hotspots! All wards are clear.</p>
               </div>
             )}
           </div>

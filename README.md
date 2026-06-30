@@ -123,3 +123,23 @@ Next.js, React, Tailwind CSS, Firebase, Firebase Functions, `@google/genai`, `@g
 - [ ] Real Firebase project, Maps key, and Gemini key configured for live mode
 - [ ] Demo seed data loaded before presentation
 - [ ] End-to-end mobile report flow tested against deployment
+
+## Open311 Field Mapping
+
+CivicSense is designed with Open311 compatibility in mind. The following table maps CivicSense data fields to the Open311 `service_request` specification, enabling future integration with existing civic reporting infrastructure.
+
+| CivicSense Field | Open311 Field | Notes |
+|---|---|---|
+| `publicTrackingId` | `service_request_id` | e.g. `CS-2847-XKQM` |
+| `category` | `service_code` | e.g. `pothole`, `waterlogging` |
+| `ward` | `jurisdiction_id` | Ward name maps to municipal jurisdiction |
+| `status` | `status` | `assigned`→`open`, `resolved`→`closed`, `in_progress`→`in_process` |
+| `gpsLat` / `gpsLng` | `lat` / `long` | WGS84 decimal degrees |
+| `address` | `address` | Reverse-geocoded via Google Geocoding API |
+| `textDescription` | `description` | Citizen-provided free text |
+| `createdAt` | `requested_datetime` | ISO 8601 Firestore Timestamp |
+| `updatedAt` | `updated_datetime` | ISO 8601 Firestore Timestamp |
+| `severity` | *(extension)* | 1–5 scale, not in base Open311 spec |
+| `assignedOfficialId` | `agency_responsible` | Maps to official's name/department |
+
+> **Note:** Full Open311 API compliance (REST endpoint at `/api/requests.json`) is planned for the post-hackathon roadmap. The current schema is designed for drop-in compatibility.

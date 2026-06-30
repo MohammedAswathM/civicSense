@@ -24,7 +24,7 @@ exports.onSLAExpiry = (0, scheduler_1.onSchedule)('every 60 minutes', async () =
         await doc.ref.update({
             ...patch,
             statusHistory: admin_1.FieldValue.arrayUnion({
-                status: 'assigned',
+                status: data.status || 'assigned',
                 timestamp: new Date(),
                 changedBy: 'system',
                 note: `Auto-escalation check: ${Math.round(overdueHours)}h overdue.`,

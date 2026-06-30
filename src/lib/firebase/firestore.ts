@@ -18,12 +18,13 @@ import { db } from './config';
 import type { Issue, PublicIssue } from '@/types/issue';
 
 export function publicIssueFromIssue(issue: Issue): PublicIssue {
-  const { citizenAnonymousId: _citizenAnonymousId, ...publicIssue } = issue;
-  return publicIssue;
+  // citizenAnonymousId is now stored in issue_owners/{issueId} — strip it here as a safety measure
+  // for any legacy documents that may still have the field.
+  const { citizenAnonymousId: _citizenAnonymousId, ...publicIssue } = issue as Issue & { citizenAnonymousId?: string };
+  return publicIssue as PublicIssue;
 }
 
 export async function createIssueDraft(input: {
-  citizenAnonymousId: string;
   gpsLat: number;
   gpsLng: number;
   gpsAccuracy: number;

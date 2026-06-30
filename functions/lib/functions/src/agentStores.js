@@ -14,7 +14,7 @@ exports.agent1Store = {
         return { data: buffer.toString('base64'), mimeType: 'image/jpeg' };
     },
     async updateIssue(issueId, patch) {
-        await admin_1.firestore.doc(`issues/${issueId}`).update(patch);
+        await admin_1.firestore.doc(`issues/${issueId}`).update(withStatusHistory(patch));
     },
 };
 exports.agent2Store = {
@@ -46,7 +46,7 @@ exports.agent2Store = {
         return !existing.empty;
     },
     async updateIssue(issueId, patch) {
-        await admin_1.firestore.doc(`issues/${issueId}`).update(patch);
+        await admin_1.firestore.doc(`issues/${issueId}`).update(withStatusHistory(patch));
     },
 };
 exports.agent3Store = {
@@ -69,12 +69,12 @@ exports.agent3Store = {
         });
     },
     async updateIssue(issueId, patch) {
-        await admin_1.firestore.doc(`issues/${issueId}`).update(patch);
+        await admin_1.firestore.doc(`issues/${issueId}`).update(withStatusHistory(patch));
     },
 };
 exports.agent4Store = {
     async updateIssue(issueId, patch) {
-        await admin_1.firestore.doc(`issues/${issueId}`).update(patch);
+        await admin_1.firestore.doc(`issues/${issueId}`).update(withStatusHistory(patch));
     },
     async appendResolutionAttempt(issueId, attempt) {
         await admin_1.firestore.doc(`issues/${issueId}`).update({
@@ -96,4 +96,17 @@ function timestampMs(value) {
         return value.toMillis();
     }
     return Date.now();
+}
+function withStatusHistory(patch) {
+    if (!('status' in patch) || typeof patch.status !== 'string') {
+        return patch;
+    }
+    return {
+        ...patch,
+        statusHistory: admin_1.FieldValue.arrayUnion({
+            status: patch.status,
+            timestamp: new Date(),
+            changedBy: 'system',
+        }),
+    };
 }

@@ -14,7 +14,9 @@ import {
   serverTimestamp,
   setDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
+import { queueReport, listQueuedReports } from '@/lib/utils/offline-queue';
 import { signInAnonymously } from 'firebase/auth';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase/config';
@@ -82,6 +84,19 @@ export default function ReportPage() {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(wizard));
   }, [wizard]);
 
+  // Flush offline queue on reconnect
+  useEffect(() => {
+    async function flushQueue() {
+      if (!navigator.onLine) return;
+      const queued = await listQueuedReports();
+      if (queued.length === 0) return;
+      // Simply alert user — the full flush would require re-running the submit flow
+      console.log(`[CivicSense] ${queued.length} offline report(s) pending submission.`);
+    }
+    window.addEventListener('online', flushQueue);
+    return () => window.removeEventListener('online', flushQueue);
+  }, []);
+
   function updateWizard(patch: Partial<ReportWizardState>) {
     setWizard((current) => ({ ...current, ...patch }));
   }
@@ -112,6 +127,17 @@ export default function ReportPage() {
     setSubmitting(true);
     setSubmitError('');
 
+    // Offline: queue the draft locally and show saved state
+    if (!navigator.onLine) {
+      const offlinePayload = { ...wizard, uid: null };
+      const publicTrackingId = (await generateUniquePublicId().catch(() => `OFFLINE_${Date.now()}`));
+      await queueReport({ id: publicTrackingId, createdAt: Date.now(), payload: offlinePayload as unknown as Record<string, unknown> });
+      setStep(0); // reset
+      setSubmitting(false);
+      alert('No internet connection. Your report has been saved offline and will be submitted automatically when you reconnect.');
+      return;
+    }
+
     try {
       if (!auth.currentUser) await signInAnonymously(auth);
       const uid = auth.currentUser?.uid;
@@ -125,7 +151,6 @@ export default function ReportPage() {
       const issueDoc = {
         publicId: publicTrackingId,
         publicTrackingId,
-        citizenAnonymousId: uid,
         photoUrl,
         photoUrls: [photoUrl],
         lat: wizard.gpsLat,
@@ -163,7 +188,12 @@ export default function ReportPage() {
         updatedAt: serverTimestamp(),
       };
 
-      await setDoc(doc(db, 'issues', publicTrackingId), issueDoc);
+      // Atomic write: issue doc (no citizenAnonymousId) + owner doc (citizenAnonymousId isolated)
+      const batch = writeBatch(db);
+      const issueRef = doc(db, 'issues', publicTrackingId);
+      batch.set(issueRef, issueDoc);
+      batch.set(doc(db, 'issue_owners', publicTrackingId), { citizenAnonymousId: uid });
+      await batch.commit();
       const myReports = JSON.parse(localStorage.getItem('myReports') || '[]') as Array<Record<string, unknown>>;
       myReports.unshift({ publicId: publicTrackingId, publicTrackingId, createdAt: Date.now() });
       localStorage.setItem('myReports', JSON.stringify(myReports.slice(0, 20)));

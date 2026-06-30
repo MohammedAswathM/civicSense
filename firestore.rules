@@ -51,5 +51,16 @@ service cloud.firestore {
       allow write: if signedIn()
         && get(/databases/$(database)/documents/officials/$(request.auth.uid)).data.role == 'admin';
     }
+
+    match /issue_owners/{issueId} {
+      allow read: if request.auth != null
+        && request.auth.uid == resource.data.citizenAnonymousId;
+      allow write: if false;
+    }
+
+    match /notifications/{officialId}/items/{notifId} {
+      allow read: if request.auth != null && request.auth.uid == officialId;
+      allow write: if false;
+    }
   }
 }

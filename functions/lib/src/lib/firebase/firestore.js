@@ -36,7 +36,7 @@ async function createIssueDraft(input) {
         convergenceAlert: false,
         nearbyIssueIds: [],
         status: 'pending_classification',
-        statusHistory: [{ status: 'pending_classification', timestamp: (0, firestore_1.serverTimestamp)(), changedBy: 'system' }],
+        statusHistory: [{ status: 'pending_classification', timestamp: new Date().toISOString(), changedBy: 'system' }],
         resolutionAttempts: [],
         createdAt: (0, firestore_1.serverTimestamp)(),
         updatedAt: (0, firestore_1.serverTimestamp)(),

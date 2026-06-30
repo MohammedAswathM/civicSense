@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import TicketCard from '@/components/official/TicketCard';
 import { auth, db } from '@/lib/firebase/config';
@@ -15,6 +15,8 @@ export default function OfficialQueuePage() {
   const [tickets, setTickets] = useState<Issue[]>([]);
   const [official, setOfficial] = useState<Official | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadNotifs, setUnreadNotifs] = useState<{ id: string; message: string }[]>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
 
   useEffect(() => {
     let stopIssues: (() => void) | undefined;
@@ -59,6 +61,19 @@ export default function OfficialQueuePage() {
     return () => { stopAuth(); stopIssues?.(); };
   }, [router]);
 
+  // Listen to escalation notifications for this official
+  useEffect(() => {
+    const storedId = localStorage.getItem('civicsense.officialId');
+    if (!storedId) return;
+    const q = query(
+      collection(db, `notifications/${storedId}/items`),
+      where('read', '==', false),
+    );
+    return onSnapshot(q, (snap) => {
+      setUnreadNotifs(snap.docs.map((d) => ({ id: d.id, message: String(d.data().message || '') })));
+    });
+  }, []);
+
   const overdue = tickets.filter((t) => t.slaDeadline?.toDate && t.slaDeadline.toDate().getTime() < Date.now());
   const urgent  = tickets.filter((t) => {
     if (!t.slaDeadline?.toDate) return false;
@@ -89,6 +104,46 @@ export default function OfficialQueuePage() {
               <span className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
                 ⚠️ {urgent.length} urgent
               </span>
+            )}
+            {/* Escalation notifications bell */}
+            {unreadNotifs.length > 0 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label={`${unreadNotifs.length} unread escalation notifications`}
+                  className="relative flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 hover:bg-purple-200 transition-colors"
+                  onClick={() => setShowNotifs((v) => !v)}
+                >
+                  🔔 {unreadNotifs.length} escalation{unreadNotifs.length > 1 ? 's' : ''}
+                </button>
+                {showNotifs && (
+                  <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-gray-100 bg-white p-3 shadow-xl">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">Escalation Alerts</p>
+                    <div className="space-y-2">
+                      {unreadNotifs.map((n) => (
+                        <div key={n.id} className="flex items-start gap-2 rounded-xl border border-purple-100 bg-purple-50 p-3">
+                          <span className="mt-0.5 text-base">🔔</span>
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-700">{n.message}</p>
+                          </div>
+                          <button
+                            type="button"
+                            className="text-xs text-gray-400 hover:text-gray-600"
+                            onClick={async () => {
+                              const storedId = localStorage.getItem('civicsense.officialId');
+                              if (storedId) {
+                                await updateDoc(doc(db, `notifications/${storedId}/items`, n.id), { read: true });
+                              }
+                            }}
+                          >
+                            ✓
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             <Link href="/" className="text-sm font-medium text-civic-blue hover:underline">Public map</Link>
           </div>
