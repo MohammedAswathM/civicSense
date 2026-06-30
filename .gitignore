@@ -1,0 +1,29 @@
+node_modules
+.next
+out
+dist
+coverage
+.env.local
+.env*.local
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.tsbuildinfo
+playwright-report
+test-results
+.firebase
+demo-data
+
+# ─── SECURITY: Service account keys & private credentials ───────────────────
+# NEVER commit these files. Rotate any key that was ever pushed to a public repo.
+*-service-account*.json
+*-firebase-adminsdk-*.json
+civicsense-hackathon-*.json
+service-account.json
+gcp-key.json
+*.pem
+*.p12
+*.pfx
+
+# Specific leaked key — must NEVER be committed
+civicsense-hackathon-70af7e208119.json

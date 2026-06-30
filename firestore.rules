@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function official() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/officials/$(request.auth.uid))
+        && get(/databases/$(database)/documents/officials/$(request.auth.uid)).data.role in ['officer', 'supervisor', 'admin'];
+    }
+
+    function supervisorOrAdmin() {
+      return signedIn()
+        && get(/databases/$(database)/documents/officials/$(request.auth.uid)).data.role in ['supervisor', 'admin'];
+    }
+
+    match /issues/{issueId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.citizenAnonymousId == request.auth.uid
+        && request.resource.data.status == 'pending_classification';
+      allow update: if
+        (
+          official()
+          && (
+            resource.data.assignedOfficialId == request.auth.uid
+            || supervisorOrAdmin()
+          )
+          && request.resource.data.resolutionAttempts.size() >= resource.data.resolutionAttempts.size()
+          && request.resource.data.citizenAnonymousId == resource.data.citizenAnonymousId
+        )
+        || request.auth.token.admin == true;
+      allow delete: if false;
+    }
+
+    match /officials/{officialId} {
+      allow read: if signedIn()
+        && (request.auth.uid == officialId
+          || get(/databases/$(database)/documents/officials/$(request.auth.uid)).data.role == 'admin');
+      allow write: if signedIn()
+        && get(/databases/$(database)/documents/officials/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /predictions/{wardId} {
+      allow read: if true;
+      allow write: if request.auth.token.admin == true;
+    }
+
+    match /wards/{wardId} {
+      allow read: if true;
+      allow write: if signedIn()
+        && get(/databases/$(database)/documents/officials/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}
