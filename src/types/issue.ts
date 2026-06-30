@@ -50,22 +50,28 @@ export interface ResolutionAttempt {
 
 export interface Issue {
   id: string;
+  publicId?: string;
   publicTrackingId: string;
   citizenAnonymousId: string;
   gpsLat: number;
   gpsLng: number;
+  lat?: number;
+  lng?: number;
   gpsAccuracy: number;
   geohash: string;
   geopoint: GeoPoint;
   ward: string;
   address: string;
   category: IssueCategory;
+  citizenCategory?: IssueCategory | null;
   severity: 1 | 2 | 3 | 4 | 5;
   confidence: number;
   geminiDescription: string;
   isValidIssue: boolean;
+  photoUrl?: string;
   photoUrls: string[];
   textDescription: string;
+  description?: string;
   canonicalThreadId: string;
   corroborationCount: number;
   credibilityWeight: number;
@@ -78,9 +84,15 @@ export interface Issue {
   status: IssueStatus;
   statusHistory: StatusHistoryEntry[];
   resolutionAttempts: ResolutionAttempt[];
+  resolutionPhotoUrl?: string;
+  resolutionGpsLat?: number;
+  resolutionGpsLng?: number;
+  resolutionNote?: string;
+  rejectionReason?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   resolvedAt?: Timestamp;
+  citizenRespondedAt?: Timestamp;
   upvoteCount: number;
   upvotedByIds: string[];
 }
