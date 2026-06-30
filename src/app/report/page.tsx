@@ -140,7 +140,7 @@ export default function ReportPage() {
         textDescription: wizard.description.trim(),
         citizenCategory: wizard.selectedCategory || null,
         status: 'pending_classification',
-        statusHistory: [{ status: 'pending_classification', timestamp: serverTimestamp(), changedBy: 'system' }],
+        statusHistory: [{ status: 'pending_classification', timestamp: new Date().toISOString(), changedBy: 'system' }],
         severity: 3,
         category: 'other',
         confidence: 0,
@@ -183,7 +183,7 @@ export default function ReportPage() {
       {/* ─── Header ─────────────────────── */}
       <div className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur-sm">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
-          <Link href="/" className="flex items-center gap-1 text-sm font-medium text-civic-blue hover:underline">
+          <Link href="/map" className="flex items-center gap-1 text-sm font-medium text-civic-blue hover:underline">
             ← Back
           </Link>
           <div className="flex-1">
@@ -508,7 +508,7 @@ function LocationStep({ value, onUpdate }: { value: ReportWizardState; onUpdate:
   useEffect(() => {
     if (!mapsKey || !mapRef.current) return;
     let cancelled = false;
-    const loader = new Loader({ apiKey: mapsKey, version: 'weekly' });
+    const loader = new Loader({ apiKey: mapsKey, version: 'weekly', libraries: ['places', 'geometry'] });
     loader.load().then((google) => {
       if (cancelled || !mapRef.current) return;
       const center = value.gpsLat !== null && value.gpsLng !== null ? { lat: value.gpsLat, lng: value.gpsLng } : fallbackCenter;

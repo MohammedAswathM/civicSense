@@ -49,7 +49,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-gray-900">Public Dashboard</h1>
             <p className="mt-0.5 text-sm text-gray-500">Real-time civic issue analytics for Coimbatore</p>
           </div>
-          <Link href="/" className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+          <Link href="/map" className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">
             🗺️ Map
           </Link>
         </div>

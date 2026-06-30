@@ -19,26 +19,37 @@ export default function AdminPage() {
     let stopIssues: (() => void) | undefined;
     const stopAuth = onAuthStateChanged(auth, async (user) => {
       if (!user) { router.replace('/official/login'); return; }
-      const storedOfficialId = localStorage.getItem('civicsense.officialId');
-      const officialSnap = storedOfficialId
-        ? await getDoc(doc(db, 'officials', storedOfficialId))
-        : await getDoc(doc(db, 'officials', user.uid));
-      const officialData = officialSnap.data() as Official | undefined;
-      if (!officialSnap.exists() || officialData?.role !== 'admin') {
-        router.replace('/official/login');
-        return;
-      }
-      const officialDocs = await getDocs(collection(db, 'officials'));
-      const officialMap: Record<string, Official> = {};
-      officialDocs.forEach((d) => { officialMap[d.id] = { id: d.id, ...d.data() } as Official; });
-      setOfficials(officialMap);
-      const q = query(collection(db, 'issues'), where('status', '==', 'assigned'), where('slaDeadline', '<', Timestamp.now()));
-      stopIssues = onSnapshot(q, (snapshot) => {
-        const rows = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Issue);
-        rows.sort((a, b) => overdueHours(b) - overdueHours(a));
-        setIssues(rows);
+      try {
+        const storedOfficialId = localStorage.getItem('civicsense.officialId');
+        const officialSnap = storedOfficialId
+          ? await getDoc(doc(db, 'officials', storedOfficialId))
+          : await getDoc(doc(db, 'officials', user.uid));
+        const officialData = officialSnap.data() as Official | undefined;
+        if (!officialSnap.exists() || officialData?.role !== 'admin') {
+          router.replace('/official/login');
+          return;
+        }
+        const officialDocs = await getDocs(collection(db, 'officials'));
+        const officialMap: Record<string, Official> = {};
+        officialDocs.forEach((d) => { officialMap[d.id] = { id: d.id, ...d.data() } as Official; });
+        setOfficials(officialMap);
+        const q = query(collection(db, 'issues'), where('status', '==', 'assigned'), where('slaDeadline', '<', Timestamp.now()));
+        stopIssues = onSnapshot(q, (snapshot) => {
+          const rows = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Issue);
+          rows.sort((a, b) => overdueHours(b) - overdueHours(a));
+          setIssues(rows);
+          setLoading(false);
+        }, (err) => {
+          console.error(err);
+          setIssues([]);
+          setLoading(false);
+          alert('Firebase Error: ' + err.message + '\n\n(Did you deploy the firestore rules and indexes?)');
+        });
+      } catch (err: any) {
+        console.error(err);
         setLoading(false);
-      });
+        alert('Error fetching data: ' + err.message + '\n\n(Did you deploy the firestore rules?)');
+      }
     });
     return () => { stopAuth(); stopIssues?.(); };
   }, [router]);

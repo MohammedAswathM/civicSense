@@ -52,7 +52,7 @@ export async function createIssueDraft(input: {
     convergenceAlert: false,
     nearbyIssueIds: [],
     status: 'pending_classification',
-    statusHistory: [{ status: 'pending_classification', timestamp: serverTimestamp(), changedBy: 'system' }],
+    statusHistory: [{ status: 'pending_classification', timestamp: new Date().toISOString(), changedBy: 'system' }],
     resolutionAttempts: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),

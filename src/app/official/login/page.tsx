@@ -87,7 +87,7 @@ export default function OfficialLoginPage() {
       <div className="relative w-full max-w-md">
         {/* Back link */}
         <Link href="/" className="mb-6 flex items-center gap-1.5 text-sm font-medium text-blue-300 hover:text-white transition-colors">
-          ← Back to map
+          ← Back to home
         </Link>
 
         {/* Card */}

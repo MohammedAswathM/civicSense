@@ -36,9 +36,7 @@ service cloud.firestore {
     }
 
     match /officials/{officialId} {
-      allow read: if signedIn()
-        && (request.auth.uid == officialId
-          || get(/databases/$(database)/documents/officials/$(request.auth.uid)).data.role == 'admin');
+      allow read: if signedIn();
       allow write: if signedIn()
         && get(/databases/$(database)/documents/officials/$(request.auth.uid)).data.role == 'admin';
     }

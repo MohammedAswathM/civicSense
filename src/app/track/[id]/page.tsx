@@ -91,7 +91,7 @@ export default function TrackPage({ params }: { params: { id: string } }) {
       {/* ─── Sticky Header ──────────────── */}
       <div className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <Link href="/" className="text-sm font-medium text-civic-blue hover:underline">← Map</Link>
+          <Link href="/map" className="text-sm font-medium text-civic-blue hover:underline">← Map</Link>
           <p className="text-sm font-semibold text-gray-500">Issue Tracker</p>
         </div>
       </div>
