@@ -23,25 +23,26 @@ export default function OfficialQueuePage() {
 
       const storedOfficialId = localStorage.getItem('civicsense.officialId');
       const officialId = storedOfficialId || user.uid;
-      let officialSnap = null;
 
+      // Try to load official by stored ID first, fall back to phone number lookup
+      let officialData: Official | null = null;
       if (storedOfficialId) {
-        officialSnap = await getDoc(doc(db, 'officials', storedOfficialId));
+        const snap = await getDoc(doc(db, 'officials', storedOfficialId));
+        if (snap.exists()) officialData = snap.data() as Official;
       }
-      if (!storedOfficialId || !officialSnap || !officialSnap.exists()) {
-        const phoneQuery = query(collection(db, 'officials'), where('phone', '==', user.phoneNumber || ''));
+      if (!officialData && user.phoneNumber) {
+        const phoneQuery = query(collection(db, 'officials'), where('phone', '==', user.phoneNumber));
         const results = await getDocs(phoneQuery);
-        if (!results.empty) officialSnap = results.docs[0];
+        if (!results.empty) officialData = results.docs[0].data() as Official;
       }
-      if (!officialSnap || ('empty' in officialSnap && officialSnap.empty) || ('exists' in officialSnap && !officialSnap.exists())) {
+      if (!officialData) {
         router.replace('/official/login');
         return;
       }
 
-      const data = 'docs' in officialSnap ? officialSnap.docs[0].data() as Official : officialSnap.data() as Official;
-      setOfficial(data);
+      setOfficial(officialData);
       localStorage.setItem('civicsense.officialId', officialId);
-      localStorage.setItem('civicsense.officialRole', data.role);
+      localStorage.setItem('civicsense.officialRole', officialData.role);
 
       const q = query(
         collection(db, 'issues'),

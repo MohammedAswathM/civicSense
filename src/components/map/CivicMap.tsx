@@ -36,8 +36,8 @@ export default function CivicMap({ issues }: { issues: Issue[] }) {
   useEffect(() => {
     if (!hasMapsKey || !mapRef.current || !apiKey) return;
     const loader = new Loader({ apiKey, version: 'weekly', libraries: ['places', 'geometry'] });
-    let markers: Array<{ setMap(map: google.maps.Map | null): void }> = [];
-    let map: google.maps.Map | null = null;
+    let markers: Array<{ setMap(m: unknown): void }> = [];
+    let map: unknown = null;
 
     loader
       .load()
@@ -325,7 +325,7 @@ function formatSla(issue: Issue) {
 }
 
 /* ─── Minimal Google Maps custom styles ────────────────────── */
-const mapStyles: google.maps.MapTypeStyle[] = [
+const mapStyles: Array<Record<string, unknown>> = [
   { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
   { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
